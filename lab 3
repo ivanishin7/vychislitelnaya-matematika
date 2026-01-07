@@ -1,0 +1,127 @@
+import math
+
+A_EXP = [0.9999998, 1.0000000, 0.5000063, 0.1666674, 0.0416350, 0.0083298, 0.0014393, 0.0002040]
+
+
+A_SIN = {
+    1:  1.000000002,
+    3: -0.166666589,
+    5:  0.008333075,
+    7: -0.000198107,
+    9:  0.000002608
+}
+
+
+
+def poly_horner(coeffs, x):
+    res = 0.0
+    for c in reversed(coeffs):
+        res = res * x + c
+    return res
+
+
+def exp_approx(x: float) -> float:
+    return poly_horner(A_EXP, x)
+
+
+def sin_approx(x: float) -> float:
+    res = 0.0
+    for p in (9, 7, 5, 3, 1):
+        res = res * x * x + A_SIN[p]
+    return res * x
+
+
+
+
+def sqrt_iter(x: float, y0: float, eps: float = 1e-12, max_iter: int = 200):
+    y = y0
+    it = 0
+    while it < max_iter:
+        y_next = 0.5 * (y + x / y)
+        if abs(y_next - y) < eps:
+            return y_next, it + 1
+        y = y_next
+        it += 1
+    return y, it
+
+
+def inv_sqrt_iter(x: float, y0: float, eps: float = 1e-12, max_iter: int = 200):
+    y = y0
+    it = 0
+    while it < max_iter:
+        y_next = y * (1.5 - 0.5 * x * y * y)
+        if abs(y_next - y) < eps:
+            return y_next, it + 1
+        y = y_next
+        it += 1
+    return y, it
+
+
+def print_block(title: str):
+    print("\n" + "=" * 70)
+    print(title)
+    print("=" * 70)
+
+
+def part1():
+    print_block("ЧАСТЬ 1. Многочленные приближения")
+
+    x1 = float(input("Введите x для e^x (|x| <= 1): ").replace(",", "."))
+    v_ap = exp_approx(x1)
+    v_true = math.exp(x1)
+    print("\nЗадание 1. Функция e^x")
+    print(f"x = {x1}")
+    print(f"Приближенное значение = {v_ap}")
+    print(f"Точное (math.exp)     = {v_true}")
+    print(f"Абсолютная ошибка     = {abs(v_ap - v_true)}")
+
+    x2 = float(input("\nВведите x для sin(x) (|x| <= pi/2): ").replace(",", "."))
+    s_ap = sin_approx(x2)
+    s_true = math.sin(x2)
+    print("\nЗадание 2. Функция sin(x)")
+    print(f"x = {x2}")
+    print(f"Приближенное значение = {s_ap}")
+    print(f"Точное (math.sin)     = {s_true}")
+    print(f"Абсолютная ошибка     = {abs(s_ap - s_true)}")
+
+
+def part2():
+    print_block("ЧАСТЬ 2. Метод итераций")
+
+    print("\nЗадание 1. Функция sqrt(x)")
+    tests_sqrt = [(14.76, 3.8), (0.142, 0.4)]
+    for x, y0 in tests_sqrt:
+        y, it = sqrt_iter(x, y0)
+        print(f"\nx = {x}, y0 = {y0}")
+        print(f"Результат (итерации)  = {y}")
+        print(f"Проверка (math.sqrt)  = {math.sqrt(x)}")
+        print(f"Итераций              = {it}")
+        print(f"Абсолютная ошибка     = {abs(y - math.sqrt(x))}")
+
+    print("\n\nЗадание 2. Функция y = 1/sqrt(x)")
+    tests_inv = [(17.32, 0.24), (0.464, 1.5)]
+    for x, y0 in tests_inv:
+        y, it = inv_sqrt_iter(x, y0)
+        print(f"\nx = {x}, y0 = {y0}")
+        print(f"Результат (итерации)  = {y}")
+        print(f"Проверка (1/sqrt)     = {1.0 / math.sqrt(x)}")
+        print(f"Итераций              = {it}")
+        print(f"Абсолютная ошибка     = {abs(y - 1.0 / math.sqrt(x))}")
+
+
+def main():
+    print("Лабораторная работа №3. Вычисление элементарных функций")
+    print("1) Часть 1 (e^x и sin(x) по коэффициентам)")
+    print("2) Часть 2 (итерации: sqrt(x) и 1/sqrt(x))")
+    choice = input("Выбор: ").strip()
+
+    if choice == "1":
+        part1()
+    elif choice == "2":
+        part2()
+    else:
+        print("Неверный выбор.")
+
+
+if name == "main":
+    main()
