@@ -1,0 +1,164 @@
+import math
+from enum import IntEnum
+from typing import Callable, Optional
+
+A = 0.4
+B = 1.2
+
+def f(x: float) -> float:
+    return math.sqrt(0.5 * x + 2.0) / math.sqrt(2.0 * x * x + 1.8)
+
+
+class TaskType(IntEnum):
+    INTEGRATION = 1
+
+class IntegrationMethod(IntEnum):
+    LEFT_RECT = 1
+    RIGHT_RECT = 2
+    TRAPEZOID = 3
+    PARABOLA = 4
+
+class AlgorithmType(IntEnum):
+    CONST_STEP = 1
+    VAR_STEP = 2
+
+
+def input_int_range(prompt: str, lo: int, hi: int) -> int:
+    while True:
+        try:
+            x = int(input(prompt))
+            if lo <= x <= hi:
+                return x
+        except ValueError:
+            pass
+
+
+def menu_task_type() -> TaskType:
+    print("1) Численное интегрирование")
+    return TaskType(input_int_range(">", 1, 1))
+
+
+def menu_integration_method() -> IntegrationMethod:
+    print("1) Левые прямоугольники")
+    print("2) Правые прямоугольники")
+    print("3) Трапеции")
+    print("4) Параболы")
+    return IntegrationMethod(input_int_range(">", 1, 4))
+
+
+def menu_algorithm() -> AlgorithmType:
+    print("1) Постоянный шаг")
+    print("2) Переменный шаг")
+    return AlgorithmType(input_int_range(">", 1, 2))
+
+
+def input_partitions_many() -> list[int]:
+    ns = []
+    while True:
+        n = input_int_range("N (0 - выход): ", 0, 10**9)
+        if n == 0:
+            break
+        ns.append(n)
+    return ns
+
+
+def integrate_left_rect(fun: Callable[[float], float], a: float, b: float, n: int) -> float:
+    h = (b - a) / n
+    s = 0.0
+    x = a
+    for _ in range(n):
+        s += fun(x)
+        x += h
+    return s * h
+
+
+def integrate_right_rect(fun, a, b, n):
+    h = (b - a) / n
+    s = 0.0
+    x = a + h
+    for _ in range(n):
+        s += fun(x)
+        x += h
+    return s * h
+
+
+def integrate_trapezoid(fun, a, b, n):
+    h = (b - a) / n
+    s = 0.5 * (fun(a) + fun(b))
+    x = a + h
+    for _ in range(n - 1):
+        s += fun(x)
+        x += h
+    return s * h
+
+
+def integrate_simpson(fun, a, b, n):
+    if n % 2 == 1:
+        n += 1
+    h = (b - a) / n
+    s = fun(a) + fun(b)
+    for i in range(1, n):
+        s += (4 if i % 2 == 1 else 2) * fun(a + i * h)
+    return s * h / 3
+
+
+def compute_table_const_step(fun, a, b, ns, exact: Optional[float] = None):
+    rows = []
+    for n in ns:
+        row = {
+            "N": n,
+            "Left": integrate_left_rect(fun, a, b, n),
+            "Right": integrate_right_rect(fun, a, b, n),
+            "Trapezoid": integrate_trapezoid(fun, a, b, n),
+            "Simpson": integrate_simpson(fun, a, b, n),
+        }
+        if exact is not None:
+            for k in ("Left", "Right", "Trapezoid", "Simpson"):
+                row[f"err_{k}"] = abs(row[k] - exact)
+        rows.append(row)
+    return rows
+
+
+def varstep_runge(fun, a, b, eps, n0=4):
+    n = n0
+    i1 = integrate_left_rect(fun, a, b, n)
+    while True:
+        n *= 2
+        i2 = integrate_left_rect(fun, a, b, n)
+        if abs(i2 - i1) < eps:
+            return n, i2
+        i1 = i2
+
+
+def varstep_adaptive(fun, a, b, eps):
+    def rec(x0, x1, e):
+        h = x1 - x0
+        i1 = fun(x0) * h
+        xm = (x0 + x1) / 2
+        i2 = fun(x0) * (xm - x0) + fun(xm) * (x1 - xm)
+        if abs(i2 - i1) < e:
+            return i2
+        return rec(x0, xm, e / 2) + rec(xm, x1, e / 2)
+    return rec(a, b, eps)
+
+
+def main():
+    menu_task_type()
+    menu_integration_method()
+    alg = menu_algorithm()
+
+    if alg == AlgorithmType.CONST_STEP:
+        ns = input_partitions_many()
+        table = compute_table_const_step(f, A, B, ns)
+        for r in table:
+            print(r)
+    else:
+        eps = float(input("eps: "))
+        n, v1 = varstep_runge(f, A, B, eps)
+        v2 = varstep_adaptive(f, A, B, eps)
+        print(n, v1)
+        print(v2)
+
+
+if name == "main":
+    main()
